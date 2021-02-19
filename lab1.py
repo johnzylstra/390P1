@@ -41,11 +41,11 @@ class NeuralNetwork_2Layer():
 
     # Activation function.
     def __sigmoid(self, x):
-        pass   #TODO: implement
+        return 1/(1 + np.exp(-x))
 
     # Activation prime function.
     def __sigmoidDerivative(self, x):
-        pass   #TODO: implement
+        return np.exp(-x)/((np.exp(-x)+1)**2)
 
     # Batch generator for mini-batches. Not randomized.
     def __batchGenerator(self, l, n):
@@ -158,6 +158,7 @@ def main():
     model = trainModel(data[0])
     preds = runModel(data[1][0], model)
     evalResults(data[1], preds)
+
 
 
 
