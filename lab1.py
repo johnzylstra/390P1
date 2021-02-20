@@ -24,8 +24,8 @@ IMAGE_SIZE = 784
 
 # Use these to set the algorithm to use.
 #ALGORITHM = "guesser"
-#ALGORITHM = "custom_net"
-ALGORITHM = "tf_net"
+ALGORITHM = "custom_net"
+#ALGORITHM = "tf_net"
 
 
 
@@ -54,13 +54,15 @@ class NeuralNetwork_2Layer():
             yield l[i : i + n]
 
     # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 100000, minibatches = True, mbs = 100):
-        # for i in range(epochs):
-        #     l1, l2 = self.__forward(xVals)
-        #     l2delta = (l2-yVals)*self.__sigmoidDerivative(l2)
-        #     l1delta = (l2delta)*self.W2.T*self.__sigmoidDerivative(np.dot(xVals, self.W1))
-        #     self.W1 -= np.dot(xVals.T, l1delta)
-        #     self.W2 -= np.dot(l1.T, l2delta)
+    def train(self, xVals, yVals, epochs = 10, minibatches = True, mbs = 100): #set epochs back to 100000
+        for e in range(epochs):
+            for i in range(len(xVals)):
+              x, y = xVals[i], yVals[i]
+              l1, l2 = self.__forward(x)
+              l2delta = (y-l2)*(l2*(1-l2))
+              l1delta = np.dot(l2delta, self.W2.T)*(l1*(1-l1))
+              self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))
+              self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))
         pass
 
     # Forward pass.
@@ -89,8 +91,8 @@ def guesserClassifier(xTest):
 def buildNet():
     model = keras.Sequential()
     lossType = keras.losses.categorical_crossentropy
-    model.add(keras.layers.Dense(200, activation = "relu"))
-    model.add(keras.layers.Dropout(0.1))
+    model.add(keras.layers.Dense(512, activation = "relu"))
+    model.add(keras.laesyers.Dropout(0.2))
     model.add(keras.layers.Dense(10, activation = "softmax"))
     model.compile(optimizer = "adam", loss = lossType)
     return model
@@ -101,6 +103,11 @@ def trainNet(model, x, y, eps):
 
 def runNet(model, x):
     preds = model.predict(x)
+    for i in range(len(preds)):
+      prediction = preds[i].argmax(axis=-1)
+      out = np.zeros(10)
+      out[prediction] = 1
+      preds[i] = out
     return preds
 
 
@@ -119,7 +126,7 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = ((raw[0][0]/255,raw[0][1]/255), (raw[1][0]/255,raw[1][1]))            # Add range reduction here (0-255 ==> 0.0-1.0).
+    ((xTrain, yTrain), (xTest, yTest)) = ((raw[0][0]/255,raw[0][1]), (raw[1][0]/255,raw[1][1]))            # Add range reduction here (0-255 ==> 0.0-1.0).
     xTrain = np.reshape(xTrain, (60000, 784)) #Flattening train
     xTest = np.reshape(xTest, (10000, 784)) #Flattening test
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
@@ -139,11 +146,14 @@ def trainModel(data):
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
         print("Not yet implemented.")                   #TODO: Write code to build and train your custon neural net.
-        return None
+
+        nn = NeuralNetwork_2Layer(784, 10, 200, learningRate = 0.1)
+        nn.train(xTrain, yTrain)
+        return nn
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
         model = buildNet()
-        model = trainNet(model, data[0], data[1], 30)
+        model = trainNet(model, xTrain, yTrain, 30)
         print("We'll see if this works.")                   #TODO: Write code to build and train your keras neural net.
         return model
     else:
@@ -157,7 +167,8 @@ def runModel(data, model):
     elif ALGORITHM == "custom_net":
         print("Testing Custom_NN.")
         print("Not yet implemented.")                   #TODO: Write code to run your custon neural net.
-        return None
+        preds = model.predict(data)
+        return preds
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
         preds = runNet(model, data)
@@ -189,8 +200,10 @@ def main():
     preds = runModel(data[1][0], model)
     evalResults(data[1], preds)
 
+    return data, model
+
 
 
 
 if __name__ == '__main__':
-    main()
+    d,m = main()
