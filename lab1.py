@@ -23,9 +23,9 @@ NUM_CLASSES = 10
 IMAGE_SIZE = 784
 
 # Use these to set the algorithm to use.
-ALGORITHM = "guesser"
+#ALGORITHM = "guesser"
 #ALGORITHM = "custom_net"
-#ALGORITHM = "tf_net"
+ALGORITHM = "tf_net"
 
 
 
@@ -89,10 +89,10 @@ def guesserClassifier(xTest):
 def buildNet():
     model = keras.Sequential()
     lossType = keras.losses.categorical_crossentropy
-    opt = tf.train.AdamOptimizer()
-    model.add(keras.layers.Dense(512, 784, activation = tf.nn.relu))
-    model.add(keras.layers.Dense(784, 10, activation = tf.nn.softmax))
-    model.compile(optimizer = opt, loss = lossType)
+    model.add(keras.layers.Dense(200, activation = "relu"))
+    model.add(keras.layers.Dropout(0.1))
+    model.add(keras.layers.Dense(10, activation = "softmax"))
+    model.compile(optimizer = "adam", loss = lossType)
     return model
 
 def trainNet(model, x, y, eps):
@@ -119,7 +119,9 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = raw[0]/255, raw[1]/255            #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
+    ((xTrain, yTrain), (xTest, yTest)) = ((raw[0][0]/255,raw[0][1]/255), (raw[1][0]/255,raw[1][1]))            # Add range reduction here (0-255 ==> 0.0-1.0).
+    xTrain = np.reshape(xTrain, (60000, 784)) #Flattening train
+    xTest = np.reshape(xTest, (10000, 784)) #Flattening test
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
     yTestP = to_categorical(yTest, NUM_CLASSES)
     print("New shape of xTrain dataset: %s." % str(xTrain.shape))
@@ -141,7 +143,7 @@ def trainModel(data):
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
         model = buildNet()
-        model = trainNet(model, data[0], data[1], 5)
+        model = trainNet(model, data[0], data[1], 30)
         print("We'll see if this works.")                   #TODO: Write code to build and train your keras neural net.
         return model
     else:
@@ -158,8 +160,9 @@ def runModel(data, model):
         return None
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
-        return None
+        preds = runNet(model, data)
+        #print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
+        return preds
     else:
         raise ValueError("Algorithm not recognized.")
 
