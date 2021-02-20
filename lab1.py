@@ -1,3 +1,4 @@
+#!C:/Users/johnm/AppData/Local/Microsoft/WindowsApps/python.exe
 
 import os
 import numpy as np
@@ -36,8 +37,8 @@ class NeuralNetwork_2Layer():
         self.outputSize = outputSize
         self.neuronsPerLayer = neuronsPerLayer
         self.lr = learningRate
-        self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)
-        self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)
+        self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)*.01
+        self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)*.01
 
     # Activation function.
     def __sigmoid(self, x):
@@ -54,7 +55,13 @@ class NeuralNetwork_2Layer():
 
     # Training with backpropagation.
     def train(self, xVals, yVals, epochs = 100000, minibatches = True, mbs = 100):
-        pass                                   #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+        # for i in range(epochs):
+        #     l1, l2 = self.__forward(xVals)
+        #     l2delta = (l2-yVals)*self.__sigmoidDerivative(l2)
+        #     l1delta = (l2delta)*self.W2.T*self.__sigmoidDerivative(np.dot(xVals, self.W1))
+        #     self.W1 -= np.dot(xVals.T, l1delta)
+        #     self.W2 -= np.dot(l1.T, l2delta)
+        pass
 
     # Forward pass.
     def __forward(self, input):
@@ -78,6 +85,24 @@ def guesserClassifier(xTest):
         ans.append(pred)
     return np.array(ans)
 
+#Keras net
+def buildNet():
+    model = keras.Sequential()
+    lossType = keras.losses.categorical_crossentropy
+    opt = tf.train.AdamOptimizer()
+    model.add(keras.layers.Dense(512, 784, activation = tf.nn.relu))
+    model.add(keras.layers.Dense(784, 10, activation = tf.nn.softmax))
+    model.compile(optimizer = opt, loss = lossType)
+    return model
+
+def trainNet(model, x, y, eps):
+    model.fit(x,y,epochs = eps)
+    return model
+
+def runNet(model, x):
+    preds = model.predict(x)
+    return preds
+
 
 
 #=========================<Pipeline Functions>==================================
@@ -94,7 +119,7 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = raw            #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
+    ((xTrain, yTrain), (xTest, yTest)) = raw[0]/255, raw[1]/255            #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
     yTestP = to_categorical(yTest, NUM_CLASSES)
     print("New shape of xTrain dataset: %s." % str(xTrain.shape))
@@ -115,8 +140,10 @@ def trainModel(data):
         return None
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your keras neural net.
-        return None
+        model = buildNet()
+        model = trainNet(model, data[0], data[1], 5)
+        print("We'll see if this works.")                   #TODO: Write code to build and train your keras neural net.
+        return model
     else:
         raise ValueError("Algorithm not recognized.")
 
