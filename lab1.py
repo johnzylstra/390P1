@@ -24,8 +24,8 @@ IMAGE_SIZE = 784
 
 # Use these to set the algorithm to use.
 #ALGORITHM = "guesser"
-ALGORITHM = "custom_net"
-#ALGORITHM = "tf_net"
+#ALGORITHM = "custom_net"
+ALGORITHM = "tf_net"
 
 
 
@@ -37,8 +37,8 @@ class NeuralNetwork_2Layer():
         self.outputSize = outputSize
         self.neuronsPerLayer = neuronsPerLayer
         self.lr = learningRate
-        self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)*.01
-        self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)*.01
+        self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)*.1
+        self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)*.1
 
     # Activation function.
     def __sigmoid(self, x):
@@ -54,15 +54,20 @@ class NeuralNetwork_2Layer():
             yield l[i : i + n]
 
     # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 10, minibatches = True, mbs = 100): #set epochs back to 100000
+    def train(self, xVals, yVals, epochs = 10, minibatches = True, mbs = 100):
+        
         for e in range(epochs):
+            if (e%2) == 0:
+              print("epoch: " + str(e))
+            #batchGen = self.__batchGenerator(xVals, mbs)
+            #batch = next(batchGen)
             for i in range(len(xVals)):
               x, y = xVals[i], yVals[i]
               l1, l2 = self.__forward(x)
               l2delta = (y-l2)*(l2*(1-l2))
               l1delta = np.dot(l2delta, self.W2.T)*(l1*(1-l1))
-              self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))
-              self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))
+              self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))*self.lr
+              self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))*self.lr
         pass
 
     # Forward pass.
@@ -74,6 +79,11 @@ class NeuralNetwork_2Layer():
     # Predict.
     def predict(self, xVals):
         _, layer2 = self.__forward(xVals)
+        for i in range(len(layer2)):
+          prediction = layer2[i].argmax(axis=-1)
+          out = np.zeros(10)
+          out[prediction] = 1
+          layer2[i] = out
         return layer2
 
 
@@ -92,7 +102,7 @@ def buildNet():
     model = keras.Sequential()
     lossType = keras.losses.categorical_crossentropy
     model.add(keras.layers.Dense(512, activation = "relu"))
-    model.add(keras.laesyers.Dropout(0.2))
+    model.add(keras.layers.Dropout(0.2))
     model.add(keras.layers.Dense(10, activation = "softmax"))
     model.compile(optimizer = "adam", loss = lossType)
     return model
@@ -166,7 +176,7 @@ def runModel(data, model):
         return guesserClassifier(data)
     elif ALGORITHM == "custom_net":
         print("Testing Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your custon neural net.
+        print("Working on it.")                   #TODO: Write code to run your custon neural net.
         preds = model.predict(data)
         return preds
     elif ALGORITHM == "tf_net":
@@ -180,13 +190,35 @@ def runModel(data, model):
 
 
 def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
-    xTest, yTest = data
+    preds = m.predict(d[1][0])
+
+    xTest, yTest = d[1]
     acc = 0
+    F1 = np.zeros((11,11), dtype=int)
+    F1scores = np.zeros(10)
     for i in range(preds.shape[0]):
         if np.array_equal(preds[i], yTest[i]):   acc = acc + 1
+        j = preds[i].argmax(axis=-1)
+        k = yTest[i].argmax(axis=-1)
+        F1[j][k] +=1
+
+    F1[:,10] = F1.sum(axis=-1)
+    F1[10] = F1.sum(axis=0)
+
+    for i in range(10):
+      precision = F1[i][i]/(F1[10][i])
+      recall = F1[i][i]/(F1[i][10])
+      F1scores[i] = 2*(precision*recall)/(precision+recall)
+
     accuracy = acc / preds.shape[0]
+
+
     print("Classifier algorithm: %s" % ALGORITHM)
     print("Classifier accuracy: %f%%" % (accuracy * 100))
+    print("F1 Confusion Matrix:")
+    print(F1)
+    print("F1 Scores:")
+    print(F1scores)
     print()
 
 
