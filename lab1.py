@@ -55,19 +55,35 @@ class NeuralNetwork_2Layer():
 
     # Training with backpropagation.
     def train(self, xVals, yVals, epochs = 10, minibatches = True, mbs = 100):
-        
-        for e in range(epochs):
-            if (e%2) == 0:
-              print("epoch: " + str(e))
-            #batchGen = self.__batchGenerator(xVals, mbs)
-            #batch = next(batchGen)
-            for i in range(len(xVals)):
-              x, y = xVals[i], yVals[i]
-              l1, l2 = self.__forward(x)
-              l2delta = (y-l2)*(l2*(1-l2))
-              l1delta = np.dot(l2delta, self.W2.T)*(l1*(1-l1))
-              self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))*self.lr
-              self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))*self.lr
+
+        if minibatches == False:
+          print("no minibatches")
+          for e in range(epochs):
+              # if (e%2) == 0:
+              #   print("epoch: " + str(e))
+              
+              for i in range(len(xVals)):
+                x, y = xVals[i], yVals[i]
+                l1, l2 = self.__forward(x)
+                l2delta = (y-l2)*(l2*(1-l2))
+                l1delta = np.dot(l2delta, self.W2.T)*(l1*(1-l1))
+                self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))*self.lr
+                self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))*self.lr
+        else:
+          print("minibatches of size " + str(mbs))
+          for e in range(epochs):
+              # if (e%50) == 0:
+              #   print("epoch: " + str(e))
+              
+              batchGen = self.__batchGenerator(xVals, mbs)
+              batch = next(batchGen)
+              for i in range(mbs):
+                x, y = batch[i], yVals[i]
+                l1, l2 = self.__forward(x)
+                l2delta = (y-l2)*(l2*(1-l2))
+                l1delta = np.dot(l2delta, self.W2.T)*(l1*(1-l1))
+                self.W1 += np.reshape(x, (784,1)).dot(np.reshape(l1delta, (1,len(l1delta))))*self.lr
+                self.W2 += np.reshape(l1, (len(l1),1)).dot(np.reshape(l2delta, (1, 10)))*self.lr
         pass
 
     # Forward pass.
@@ -136,9 +152,9 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = ((raw[0][0]/255,raw[0][1]), (raw[1][0]/255,raw[1][1]))            # Add range reduction here (0-255 ==> 0.0-1.0).
-    xTrain = np.reshape(xTrain, (60000, 784)) #Flattening train
-    xTest = np.reshape(xTest, (10000, 784)) #Flattening test
+    ((xTrain, yTrain), (xTest, yTest)) = ((raw[0][0]/255,raw[0][1]), (raw[1][0]/255,raw[1][1])) #range reduction
+    xTrain = np.reshape(xTrain, (60000, 784)) #Flattening training set
+    xTest = np.reshape(xTest, (10000, 784)) #Flattening test set
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
     yTestP = to_categorical(yTest, NUM_CLASSES)
     print("New shape of xTrain dataset: %s." % str(xTrain.shape))
@@ -155,16 +171,14 @@ def trainModel(data):
         return None   # Guesser has no model, as it is just guessing.
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your custon neural net.
-
         nn = NeuralNetwork_2Layer(784, 10, 200, learningRate = 0.1)
-        nn.train(xTrain, yTrain)
+        nn.train(xTrain, yTrain, epochs = 10, minibatches = False) #.10,false
         return nn
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
         model = buildNet()
         model = trainNet(model, xTrain, yTrain, 30)
-        print("We'll see if this works.")                   #TODO: Write code to build and train your keras neural net.
+        print("We'll see if this works.")
         return model
     else:
         raise ValueError("Algorithm not recognized.")
@@ -176,23 +190,21 @@ def runModel(data, model):
         return guesserClassifier(data)
     elif ALGORITHM == "custom_net":
         print("Testing Custom_NN.")
-        print("Working on it.")                   #TODO: Write code to run your custon neural net.
+        print("Working on it.")                   
         preds = model.predict(data)
         return preds
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
         preds = runNet(model, data)
-        #print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
         return preds
     else:
         raise ValueError("Algorithm not recognized.")
 
 
 
-def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
-    preds = m.predict(d[1][0])
+def evalResults(data, preds):
 
-    xTest, yTest = d[1]
+    xTest, yTest = data
     acc = 0
     F1 = np.zeros((11,11), dtype=int)
     F1scores = np.zeros(10)
@@ -211,7 +223,6 @@ def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
       F1scores[i] = 2*(precision*recall)/(precision+recall)
 
     accuracy = acc / preds.shape[0]
-
 
     print("Classifier algorithm: %s" % ALGORITHM)
     print("Classifier accuracy: %f%%" % (accuracy * 100))
